@@ -18,6 +18,7 @@ const REMOVE = 3
  */
 
 function dift (prev, next, effect, key) {
+  key = key || (x => x)
   let pStartIdx = 0
   let nStartIdx = 0
   let pEndIdx = prev.length - 1
