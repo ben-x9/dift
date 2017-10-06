@@ -27,7 +27,7 @@ function dift (prev, next, effect, key) {
 
   // List head is the same
   while (pStartIdx <= pEndIdx && nStartIdx <= nEndIdx && equal(pStartItem, nStartItem)) {
-    effect(UPDATE, pStartItem, nStartItem, nStartIdx)
+    effect(UPDATE, pStartItem, pStartIdx, nStartItem, nStartIdx)
     pStartItem = prev[++pStartIdx]
     nStartItem = next[++nStartIdx]
   }
@@ -43,7 +43,7 @@ function dift (prev, next, effect, key) {
 
   // Reversed
   while (pStartIdx <= pEndIdx && nStartIdx <= nEndIdx && equal(pStartItem, nEndItem)) {
-    effect(MOVE, pStartItem, nEndItem, (pEndIdx - movedFromFront) + 1)
+    effect(MOVE, pStartItem, pStartIdx, nEndItem, (pEndIdx - movedFromFront) + 1)
     pStartItem = prev[++pStartIdx]
     nEndItem = next[--nEndIdx]
     ++movedFromFront
@@ -51,7 +51,9 @@ function dift (prev, next, effect, key) {
 
   // Reversed the other way (in case of e.g. reverse and append)
   while (pEndIdx >= pStartIdx && nStartIdx <= nEndIdx && equal(nStartItem, pEndItem)) {
-    effect(MOVE, pEndItem, nStartItem, nStartIdx)
+    // TODO: Should `pEndIdx` be `(pEndIdx + movedFromFront) - 1` ???
+    // Update tests and verify!!
+    effect(MOVE, pEndItem, pEndIdx, nStartItem, nStartIdx)
     pEndItem = prev[--pEndIdx]
     nStartItem = next[++nStartIdx]
     --movedFromFront
@@ -59,14 +61,14 @@ function dift (prev, next, effect, key) {
 
   // List tail is the same
   while (pEndIdx >= pStartIdx && nEndIdx >= nStartIdx && equal(pEndItem, nEndItem)) {
-    effect(UPDATE, pEndItem, nEndItem, nEndIdx)
+    effect(UPDATE, pEndItem, pStartIdx, nEndItem, nEndIdx)
     pEndItem = prev[--pEndIdx]
     nEndItem = next[--nEndIdx]
   }
 
   if (pStartIdx > pEndIdx) {
     while (nStartIdx <= nEndIdx) {
-      effect(CREATE, null, nStartItem, nStartIdx)
+      effect(CREATE, null, -1, nStartItem, nStartIdx)
       nStartItem = next[++nStartIdx]
     }
 
@@ -75,7 +77,7 @@ function dift (prev, next, effect, key) {
 
   if (nStartIdx > nEndIdx) {
     while (pStartIdx <= pEndIdx) {
-      effect(REMOVE, pStartItem)
+      effect(REMOVE, pStartItem, pStartIdx)
       pStartItem = prev[++pStartIdx]
     }
 
@@ -94,11 +96,11 @@ function dift (prev, next, effect, key) {
     const oldIdx = prevMap[key(nStartItem)]
 
     if (isUndefined(oldIdx)) {
-      effect(CREATE, null, nStartItem, pivotIdx++)
+      effect(CREATE, null, -1, nStartItem, pivotIdx++)
       ++created
     } else if (pStartIdx !== oldIdx) {
       setBit(keep, oldIdx - keepBase)
-      effect(MOVE, prev[oldIdx], nStartItem, pivotIdx++)
+      effect(MOVE, prev[oldIdx], oldIdx, nStartItem, pivotIdx++)
     } else {
       pivotDest = nStartIdx
     }
@@ -106,7 +108,7 @@ function dift (prev, next, effect, key) {
 
   if (pivotDest !== null) {
     setBit(keep, 0)
-    effect(MOVE, prev[pStartIdx], next[pivotDest], pivotDest)
+    effect(MOVE, prev[pStartIdx], pStartIdx, next[pivotDest], pivotDest)
   }
 
   // If there are no creations, then you have to
@@ -117,7 +119,7 @@ function dift (prev, next, effect, key) {
   const necessaryRemovals = (prev.length - next.length) + created
   for (let removals = 0; removals < necessaryRemovals; pStartItem = prev[++pStartIdx]) {
     if (!getBit(keep, pStartIdx - keepBase)) {
-      effect(REMOVE, pStartItem)
+      effect(REMOVE, pStartItem, pStartIdx)
       ++removals
     }
   }
